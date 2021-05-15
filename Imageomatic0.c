@@ -369,7 +369,7 @@ static void executar_comando(String parts[], int nParts)
 			}
 			break;
 		case 'H':
-			if( validateCommand(parts, nParts, "S", 1)
+			if( validateCommand(parts, nParts, "H", 1)
 			&& validateImage('A') ) {
 				message("Metade", "");
 				nc = imageHalf(ia, na, ic);

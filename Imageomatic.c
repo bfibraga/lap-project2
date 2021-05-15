@@ -42,7 +42,16 @@ Comentarios:
 
 /* More Pixel functions, in case you need them */
 
+Pixel pixelPosterize(Pixel pixel, int factor) {
 
+	int divisable = (int) pow(2, 8-factor);
+
+	for (;pixel.red % divisable != 0; pixel.red--);
+	for (;pixel.green % divisable != 0; pixel.green--);
+	for (;pixel.blue % divisable != 0; pixel.blue--);
+
+	return pixel;
+}
 
 
 /*** TYPE Image ***/
@@ -56,7 +65,6 @@ Int2 imageTranspose(Image img, Int2 n, Image res) {
 	for(i.x = 0; i.x < n.x; i.x++) {
 		res[i.x][i.y] = img[i.y][i.x];
 	}
-
 	return n;
 }
 
@@ -69,6 +77,18 @@ Int2 imageInvertXAxis(Image img, Int2 n, Image res) {
 		res[i.x][i.y] = img[n.x - i.x][i.y];		
 	}
 
+	return n;
+}
+
+Int2 imageRotate90_v2(Image img, Int2 n, Image res) {
+	if (int2IsError(n)) return int2Error;
+
+	Int2 i;
+	for(i.y = 0; i.y < n.y; i.y++)
+	for(i.x = 0; i.x < n.x; i.x++) {
+		res[i.x][i.y] = img[n.x - i.x][i.y];		
+	}
+	n = int2(n.y, n.x);
 	return n;
 }
 
@@ -93,8 +113,37 @@ Int2 imageCopy(Image img, Int2 n, Image res)
 }
 
 Int2 imagePaint(String cor, Int2 n, Image res)
-{
-	return int2Error;
+{	
+	if (int2IsError(n)) return int2Error;
+
+	FILE *f;
+	if ((f = fopen(colorsFileName, "r")) == NULL) return int2Error;
+
+	Pixel p;
+	String s;
+	while (fgets(s, 255, f) != NULL) {
+		//s = "F0F8FF aliceblue"
+		if (strncmp(&s[7], cor, strlen(cor)) == 0) { // checks if color is a name of a color
+			//sprintf(s, "0x%06x",(unsigned int) s);
+			//Byte temp;
+			//sscanf("%c %s", temp, s);
+			//Byte r = (temp & 0xffff)>>4;
+			//Byte g = (temp & 0xff00ff)>>2;
+			//Byte b = (temp & 0xffff00);
+			//p = pixel(r,g,b);
+			break;
+		}
+	}
+
+	fclose(f);
+
+	Int2 i;
+	for(i.y = 0; i.y < n.y; i.y++)
+	for(i.x = 0; i.x < n.x; i.x++) {
+		res[i.x][i.y] = p;
+	}
+
+	return n;
 }
 
 Int2 imageNegative(Image img, Int2 n, Image res)
@@ -148,14 +197,44 @@ Int2 imageRotation90(Image img, Int2 n, Image res)
 	return imageInvertXAxis(temp, n , res);
 }
 
+
 Int2 imagePosterize(Image img, Int2 n, int factor, Image res)
 {
-	return int2Error;
+	if (int2IsError(n) || factor < 0 || factor > 8) return int2Error;
+
+	if (factor == 8){
+		imageCopy(img, n, res);
+		return n;
+	}
+
+	#define new_MAX_COLOR pow(2,factor);
+	// valores: nmr%(pow(2,8-factor))
+
+	Int2 i;
+	for(i.y = 0; i.y < n.y; i.y++)
+	for(i.x = 0; i.x < n.x; i.x++) {
+		Pixel temp = img[i.x][i.y];
+		Pixel resp = pixelPosterize(temp, factor);
+		res[i.x][i.y] = resp;
+	}
+
+	return n;
 }
 
 Int2 imageHalf(Image img, Int2 n, Image res)
 {
-	return int2Error;
+	if (int2IsError(n)) return int2Error;
+
+	Int2 i;
+	Int2 j = int2(n.x/2, n.y/2);
+	for(i.y = 0; i.y < j.y; i.y++)
+	for(i.x = 0; i.x < j.x; i.x++) {
+		Int2 old = int2(i.x*2, i.y*2);
+		res[i.x][i.y] = img[old.x][old.y];
+	}
+	n = j;
+
+	return n;
 }
 
 Int2 imageFunctionPlotting(DoubleFun fun, int scale, Int2 n, Image res)
