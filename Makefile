@@ -1,10 +1,10 @@
 SRCS = Imageomatic0.c Imageomatic.c lodepng.c
 
-TARG = Imageomatic
+TARG = imageomatic
 
 # specify compiler, compile flags, and needed libs
 CC   = gcc
-OPTS = -Wall
+OPTS = -Wall -g
 LIBS = -lm
 
 # this translates .c files in src list to .o’s

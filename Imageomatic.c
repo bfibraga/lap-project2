@@ -47,12 +47,40 @@ Comentarios:
 
 /*** TYPE Image ***/
 
+Int2 imageTranspose(Image img, Int2 n, Image res) {
+	if (int2IsError(n)) return int2Error;
+
+	Int2 i;
+	n = int2(n.y, n.x);
+	for(i.y = 0; i.y < n.y; i.y++)
+	for(i.x = 0; i.x < n.x; i.x++) {
+		res[i.x][i.y] = img[i.y][i.x];
+	}
+
+	return n;
+}
+
+Int2 imageInvertXAxis(Image img, Int2 n, Image res) {
+	if (int2IsError(n)) return int2Error;
+
+	Int2 i;
+	for(i.y = 0; i.y < n.y; i.y++)
+	for(i.x = 0; i.x < n.x; i.x++) {
+		res[i.x][i.y] = img[n.x - i.x][i.y];		
+	}
+
+	return n;
+}
+
+//---------------------------------
+
 void initialization(void)
 {
 	// This function is automatically called when the interpreter starts.
 	// If you need to perform some initialization, this is the place
 	// to write the initialization code.
 }
+
 
 Int2 imageCopy(Image img, Int2 n, Image res)
 {
@@ -71,7 +99,16 @@ Int2 imagePaint(String cor, Int2 n, Image res)
 
 Int2 imageNegative(Image img, Int2 n, Image res)
 {
-	return int2Error;
+	if (int2IsError(n)) return int2Error;
+
+	Int2 i;
+	for(i.y = 0; i.y < n.y; i.y++)
+	for(i.x = 0; i.x < n.x; i.x++) {
+		Pixel neg = pixel(MAX_COLOR - img[i.x][i.y].red, MAX_COLOR - img[i.x][i.y].green, MAX_COLOR - img[i.x][i.y].blue);
+		res[i.x][i.y] = neg;
+	}
+
+	return n;
 }
 
 Int2 imageDroplet(Int2 n, Image res)
@@ -85,8 +122,17 @@ Int2 imageMask(Image img1, Int2 n1, Image img2, Int2 n2, Image res) // pre: int2
 }
 
 Int2 imageGrayscale(Image img, Int2 n, Image res)
-{
-	return int2Error;
+{	
+	if (int2IsError(n)) return int2Error;
+
+	Int2 i;
+	for(i.y = 0; i.y < n.y; i.y++)
+	for(i.x = 0; i.x < n.x; i.x++) {
+		Pixel grey = pixelGray(pixelGrayAverage(img[i.x][i.y]));
+		res[i.x][i.y] = grey;
+	}
+
+	return n;
 }
 
 Int2 imageBlur(Image img, Int2 n, int nivel, Image res)
@@ -96,7 +142,10 @@ Int2 imageBlur(Image img, Int2 n, int nivel, Image res)
 
 Int2 imageRotation90(Image img, Int2 n, Image res)
 {
-	return int2Error;
+	Image temp;
+	n = imageTranspose(img, n, temp);
+	
+	return imageInvertXAxis(temp, n , res);
 }
 
 Int2 imagePosterize(Image img, Int2 n, int factor, Image res)
