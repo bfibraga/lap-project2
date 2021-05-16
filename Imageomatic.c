@@ -186,7 +186,15 @@ Int2 imageDroplet(Int2 n, Image res)
 
 Int2 imageMask(Image img1, Int2 n1, Image img2, Int2 n2, Image res) // pre: int2Equals(n1, n2)
 {
-	return int2Error;
+	if (int2IsError(n1) || int2IsError(n2)) return int2Error;
+	Int2 i;
+	Pixel p1, p2;
+	for(i.x = 0; i.x < n1.x; i.x++)
+	for(i.y = 0; i.y < n1.y; i.y++){
+		p1 = img1[i.x][i.y];
+		p2 = img2[i.x][i.y];
+		res[i.x][i.y] = pixel(p1.red*(p2.red/MAX_COLOR), p1.green*(p2.green/MAX_COLOR), p1.blue*(p2.blue/MAX_COLOR);
+	}
 }
 
 Int2 imageGrayscale(Image img, Int2 n, Image res)
