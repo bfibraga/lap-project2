@@ -53,6 +53,11 @@ Pixel pixelPosterize(Pixel pixel, int factor) {
 	return pixel;
 }
 
+Pixel pixelDroplet(double distance){
+	double value = 0.7* MAX_COLOR + 0.3 * sin(distance / 20) * MAX_COLOR;
+	return pixel(value, value, value);
+}
+
 
 /*** TYPE Image ***/
 
@@ -115,28 +120,33 @@ Int2 imageCopy(Image img, Int2 n, Image res)
 Int2 imagePaint(String cor, Int2 n, Image res)
 {	
 	if (int2IsError(n)) return int2Error;
-
+	unsigned int r =0, g = 0, b = 0, lookFile = 0;
+	sscanf(cor, "%2x%2x%2x", &r, &g, &b); // reads the string to check if it's a hexcode for a colour
+	
+	if ((r+g+b)/3 > MAX_COLOR && strlen(cor) == 6){ // if the sum of values divided by 3 becomes greater than MAX_COLOR
+		r = 0;					// then it can't be interpreted as a hexcode so we put black by default
+		g = 0;					// and we have to look through the cor.txt file
+		b = 0;
+		lookFile = 1;
+	}
+	
+	Pixel p;
+	if(lookFile == 1){
 	FILE *f;
 	if ((f = fopen(colorsFileName, "r")) == NULL) return int2Error;
 
-	Pixel p;
 	String s;
-	while (fgets(s, 255, f) != NULL) {
-		//s = "F0F8FF aliceblue"
-		if (strncmp(&s[7], cor, strlen(cor)) == 0) { // checks if color is a name of a color
-			//sprintf(s, "0x%06x",(unsigned int) s);
-			//Byte temp;
-			//sscanf("%c %s", temp, s);
-			//Byte r = (temp & 0xffff)>>4;
-			//Byte g = (temp & 0xff00ff)>>2;
-			//Byte b = (temp & 0xffff00);
-			//p = pixel(r,g,b);
-			break;
+	int found = 0;
+	while ((fgets(s, 255, f) != NULL) && found == 0) { // each line will be "hexcode nameColour"
+		String colour;
+		sscanf(s, "%2x2x2x %s", &r, &g, &b, &colour); // we select the values to their respective variables
+		if (strncmp(colour, cor, strlen(cor)) == 0)  // checks if color is a name of a color
+			found = 1
 		}
-	}
-
+	
 	fclose(f);
-
+	}
+	p = pixel(r,g,b);
 	Int2 i;
 	for(i.y = 0; i.y < n.y; i.y++)
 	for(i.x = 0; i.x < n.x; i.x++) {
@@ -162,7 +172,16 @@ Int2 imageNegative(Image img, Int2 n, Image res)
 
 Int2 imageDroplet(Int2 n, Image res)
 {
-	return int2Error;
+	if (int2IsError(n)) return int2Error;
+	Int2 center = int2Half(n); // calculate the center of the image
+	double distance; 
+	Int2 i;
+	for(i.x = 0; i.x < n.x; i.x++)
+	for(i.y = 0; i.y < n.y; i.y++){
+		distance = int2Distance(i, n); // calculate the distance between the pixel to the center
+		res[i.x][i.y] = pixelDroplet(distance); // we put the correspondent pixel according to a provided formula
+	}
+	return n;
 }
 
 Int2 imageMask(Image img1, Int2 n1, Image img2, Int2 n2, Image res) // pre: int2Equals(n1, n2)
