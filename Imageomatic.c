@@ -13,8 +13,8 @@ tab = 4 espaços
 
 
  IDENTIFICAÇÃO DOS AUTORES -
-	Aluno 1: numero, nome
-	Aluno 2: numero, nome
+	Aluno 1: 57747, Bruno Braga
+	Aluno 2: 57833, Bruno Cabrita
 
 Comentarios:
 
@@ -35,69 +35,32 @@ Comentarios:
 
 /* More Int2 functions, in case you need them */
 
-
-
+Int2 int2Subtract(Int2 a, Int2 b) {
+	return int2(a.x - b.x, a.y - b.y);
+}
 
 /*** TYPE Pixel ***/
 
 /* More Pixel functions, in case you need them */
 
+/*Returns a pixel posterized by given factor*/
 Pixel pixelPosterize(Pixel pixel, int factor) {
 
-	int divisable = (int) pow(2, 8-factor);
-
-	for (;pixel.red % divisable != 0; pixel.red--);
-	for (;pixel.green % divisable != 0; pixel.green--);
-	for (;pixel.blue % divisable != 0; pixel.blue--);
+	int mask = 0xff << (8 - factor);
+	pixel.red = pixel.red & mask;
+	pixel.green = pixel.green  & mask;
+	pixel.blue = pixel.blue & mask;
 
 	return pixel;
 }
 
-Pixel pixelDroplet(double distance){
-	double value = 0.7* MAX_COLOR + 0.3 * sin(distance / 20) * MAX_COLOR;
-	return pixel(value, value, value);
+void sum_color(double sum_color[], Pixel add) {
+	sum_color[0] += add.red;
+	sum_color[1] += add.green;
+	sum_color[2] += add.blue;
 }
-
 
 /*** TYPE Image ***/
-
-Int2 imageTranspose(Image img, Int2 n, Image res) {
-	if (int2IsError(n)) return int2Error;
-
-	Int2 i;
-	n = int2(n.y, n.x);
-	for(i.y = 0; i.y < n.y; i.y++)
-	for(i.x = 0; i.x < n.x; i.x++) {
-		res[i.x][i.y] = img[i.y][i.x];
-	}
-	return n;
-}
-
-Int2 imageInvertXAxis(Image img, Int2 n, Image res) {
-	if (int2IsError(n)) return int2Error;
-
-	Int2 i;
-	for(i.y = 0; i.y < n.y; i.y++)
-	for(i.x = 0; i.x < n.x; i.x++) {
-		res[i.x][i.y] = img[n.x - i.x][i.y];		
-	}
-
-	return n;
-}
-
-Int2 imageRotate90_v2(Image img, Int2 n, Image res) {
-	if (int2IsError(n)) return int2Error;
-
-	Int2 i;
-	for(i.y = 0; i.y < n.y; i.y++)
-	for(i.x = 0; i.x < n.x; i.x++) {
-		res[i.x][i.y] = img[n.x - i.x][i.y];		
-	}
-	n = int2(n.y, n.x);
-	return n;
-}
-
-//---------------------------------
 
 void initialization(void)
 {
@@ -120,33 +83,30 @@ Int2 imageCopy(Image img, Int2 n, Image res)
 Int2 imagePaint(String cor, Int2 n, Image res)
 {	
 	if (int2IsError(n)) return int2Error;
-	unsigned int r =0, g = 0, b = 0, lookFile = 0;
-	sscanf(cor, "%2x%2x%2x", &r, &g, &b); // reads the string to check if it's a hexcode for a colour
-	
-	if ((r+g+b)/3 > MAX_COLOR && strlen(cor) == 6){ // if the sum of values divided by 3 becomes greater than MAX_COLOR
-		r = 0;					// then it can't be interpreted as a hexcode so we put black by default
-		g = 0;					// and we have to look through the cor.txt file
-		b = 0;
-		lookFile = 1;
-	}
-	
-	Pixel p;
-	if(lookFile == 1){
+
 	FILE *f;
 	if ((f = fopen(colorsFileName, "r")) == NULL) return int2Error;
 
+	Pixel p;
 	String s;
-	int found = 0;
-	while ((fgets(s, 255, f) != NULL) && found == 0) { // each line will be "hexcode nameColour"
-		String colour;
-		sscanf(s, "%2x2x2x %s", &r, &g, &b, &colour); // we select the values to their respective variables
-		if (strncmp(colour, cor, strlen(cor)) == 0)  // checks if color is a name of a color
-			found = 1
+	while (fgets(s, 255, f) != NULL) {
+		if (strncmp(&s[7], cor, strlen(cor)) == 0) { // checks if color is a name of a color
+			unsigned int dec_color;
+			sscanf(s, "%x %s", &dec_color, s);
+			Byte b[3] = {
+				(dec_color&0xff0000)>>16,
+				(dec_color&0x00ff00)>>8,
+				(dec_color&0x0000ff)
+			};
+			for (int i = 0 ; i < 3 ; i++) printf("%x\n", b[i]);
+
+			p = pixel(b[0],b[1],b[2]);
+			break;
 		}
-	
-	fclose(f);
 	}
-	p = pixel(r,g,b);
+
+	fclose(f);
+
 	Int2 i;
 	for(i.y = 0; i.y < n.y; i.y++)
 	for(i.x = 0; i.x < n.x; i.x++) {
@@ -173,28 +133,36 @@ Int2 imageNegative(Image img, Int2 n, Image res)
 Int2 imageDroplet(Int2 n, Image res)
 {
 	if (int2IsError(n)) return int2Error;
-	Int2 center = int2Half(n); // calculate the center of the image
-	double distance; 
+
 	Int2 i;
-	for(i.x = 0; i.x < n.x; i.x++)
-	for(i.y = 0; i.y < n.y; i.y++){
-		distance = int2Distance(i, n); // calculate the distance between the pixel to the center
-		res[i.x][i.y] = pixelDroplet(distance); // we put the correspondent pixel according to a provided formula
+	Int2 center = int2Half(n);
+	double dist;
+	for(i.y = 0; i.y < n.y; i.y++)
+	for(i.x = 0; i.x < n.x; i.x++) {
+		dist = int2Distance(i,center);
+		res[i.x][i.y] = pixelGray(0.7* MAX_COLOR + 0.3 * sin(dist / 20) * MAX_COLOR);
 	}
+
 	return n;
 }
+
+
 
 Int2 imageMask(Image img1, Int2 n1, Image img2, Int2 n2, Image res) // pre: int2Equals(n1, n2)
 {
 	if (int2IsError(n1) || int2IsError(n2)) return int2Error;
+	
 	Int2 i;
-	Pixel p1, p2;
-	for(i.x = 0; i.x < n1.x; i.x++)
-	for(i.y = 0; i.y < n1.y; i.y++){
-		p1 = img1[i.x][i.y];
-		p2 = img2[i.x][i.y];
-		res[i.x][i.y] = pixel(p1.red*(p2.red/MAX_COLOR), p1.green*(p2.green/MAX_COLOR), p1.blue*(p2.blue/MAX_COLOR);
+	for(i.y = 0; i.y < n1.y; i.y++)
+	for(i.x = 0; i.x < n1.x; i.x++) {
+		Pixel current = img1[i.x][i.y];
+		float mask[3] = {(float)img2[i.x][i.y].red/MAX_COLOR, 
+						(float)img2[i.x][i.y].green/MAX_COLOR, 
+						(float)img2[i.x][i.y].blue/MAX_COLOR };
+		res[i.x][i.y] = pixel(current.red*mask[0], current.green*mask[1], current.blue*mask[2]);
 	}
+
+	return n1;
 }
 
 Int2 imageGrayscale(Image img, Int2 n, Image res)
@@ -213,15 +181,45 @@ Int2 imageGrayscale(Image img, Int2 n, Image res)
 
 Int2 imageBlur(Image img, Int2 n, int nivel, Image res)
 {
-	return int2Error;
+	if (int2IsError(n) || nivel < 0) return int2Error;
+
+	if (nivel == 0) {
+		imageCopy(img, n, res);
+		return n;
+	}
+
+	#define ZERO2 int2(0,0)
+
+	Int2 i, j;
+	 
+	for(i.y = 0; i.y < n.y; i.y++)
+	for(i.x = 0; i.x < n.x; i.x++) {
+		double sum[3] = {0,0,0}; // R=0 ; G=0 ; B=0
+		double count = 0;
+		for (j.x = i.x-nivel ; j.x <= i.x+nivel ; j.x++)
+		for (j.y = i.y-nivel ; j.y <= i.y+nivel ; j.y++) {
+			if (int2Between(ZERO2, j, n)) {
+				sum_color(sum, img[j.x][j.y]);
+				count++;
+			}
+		}
+		res[i.x][i.y] = pixel(sum[0]/count, sum[1]/count, sum[2]/count);
+	}
+
+	return n;
 }
 
-Int2 imageRotation90(Image img, Int2 n, Image res)
-{
-	Image temp;
-	n = imageTranspose(img, n, temp);
-	
-	return imageInvertXAxis(temp, n , res);
+Int2 imageRotation90(Image img, Int2 n, Image res) {
+	if (int2IsError(n)) return int2Error;
+
+	Int2 i;
+	Int2 j = int2(n.y, n.x);
+	for(i.y = 0; i.y < j.y; i.y++)
+	for(i.x = 0; i.x < j.x; i.x++) {
+		res[i.x][i.y] = img[n.y-i.y][n.x-i.x];		
+	}
+
+	return j;
 }
 
 
@@ -233,9 +231,6 @@ Int2 imagePosterize(Image img, Int2 n, int factor, Image res)
 		imageCopy(img, n, res);
 		return n;
 	}
-
-	#define new_MAX_COLOR pow(2,factor);
-	// valores: nmr%(pow(2,8-factor))
 
 	Int2 i;
 	for(i.y = 0; i.y < n.y; i.y++)
@@ -266,7 +261,29 @@ Int2 imageHalf(Image img, Int2 n, Image res)
 
 Int2 imageFunctionPlotting(DoubleFun fun, int scale, Int2 n, Image res)
 {
-	return int2Error;
+	if (int2IsError(n)) return int2Error;
+
+	
+
+	Int2 i;
+	for(i.y = 0; i.y < n.y; i.y++)
+	for(i.x = 0; i.x < n.x; i.x++) {
+		if (i.x == n.x/2) {
+			res[i.x][i.y] = black;
+		} else if (i.y == n.y/2) {
+			res[i.x][i.y] = black;
+		} else {
+			double resX = (i.x-n.x/2)/n.x;
+			double resY = (i.y-n.x/2)/n.y;
+			double result = -fun(resX)*scale;
+
+		if (resY == (int)(result)){
+			res[i.x][i.y] = black;
+		} else res[i.x][i.y] = white;
+		}
+	}
+
+	return n;
 }
 
 Int2 imageOrderedDithering(Image img, Int2 n, Image res)
