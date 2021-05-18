@@ -104,9 +104,6 @@ Int2 imagePaint(String cor, Int2 n, Image res)
 	Pixel p;
 	FILE *f;
 	if ((f = fopen(colorsFileName, "r")) == NULL) return int2Error;
-
-	
-	
 	while (fgets(s, 255, f) != NULL && found == 0) {
 		if (strncmp(&s[7], cor, strlen(cor)) == 0) { // checks if color is a name of a color
 			unsigned int dec_color;
@@ -119,11 +116,13 @@ Int2 imagePaint(String cor, Int2 n, Image res)
 	}
 
 	fclose(f);
-	int num = sscanf(cor, "%2x%2x%2x%s", &b[0], &b[1], &b[2], s);
-	if ((found == 0) && num != 3){
-		b[0] = 0;
-		b[1] = 0;
-		b[2] = 0;
+	
+	if ((found == 0) ){
+		if (sscanf(cor, "%2x%2x%2x%s", &b[0], &b[1], &b[2], s) != 3){
+			b[0] = 0;
+			b[1] = 0;
+			b[2] = 0;
+		}
 	}
 		
 	p = pixel(b[0],b[1],b[2]);
@@ -236,7 +235,7 @@ Int2 imageRotation90(Image img, Int2 n, Image res) {
 	Int2 j = int2(n.y, n.x);
 	for(i.y = 0; i.y < j.y; i.y++)
 	for(i.x = 0; i.x < j.x; i.x++) {
-		res[i.x][i.y] = img[n.y-i.y][n.x-i.x];		
+		res[i.x][i.y] = img[i.y][n.x-i.x];		
 	}
 
 	return j;
