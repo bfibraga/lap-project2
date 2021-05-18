@@ -60,6 +60,21 @@ void sum_color(double sum_color[], Pixel add) {
 	sum_color[2] += add.blue;
 }
 
+/*** TYPE String ***/
+
+void convertStringToEncodedString(String s){
+	int length = strlen(s);
+	for(int i = 0; i < length; i++){
+		char character = s[i];
+		if ( character > 'a' && character < 'z')
+			character += 32;
+		else if ( (character & 0xffc0) == 0 || character == '@')
+			character = '?';
+		s[i] = character << 2;
+	}
+
+}
+
 /*** TYPE Image ***/
 
 void initialization(void)
@@ -98,7 +113,6 @@ Int2 imagePaint(String cor, Int2 n, Image res)
 				(dec_color&0x00ff00)>>8,
 				(dec_color&0x0000ff)
 			};
-			for (int i = 0 ; i < 3 ; i++) printf("%x\n", b[i]);
 
 			p = pixel(b[0],b[1],b[2]);
 			break;
@@ -263,25 +277,21 @@ Int2 imageFunctionPlotting(DoubleFun fun, int scale, Int2 n, Image res)
 {
 	if (int2IsError(n)) return int2Error;
 
-	
-
-	Int2 i;
+	Int2 i, center = int2(n.x/2, n.y/2);
 	for(i.y = 0; i.y < n.y; i.y++)
 	for(i.x = 0; i.x < n.x; i.x++) {
-		if (i.x == n.x/2) {
-			res[i.x][i.y] = black;
-		} else if (i.y == n.y/2) {
-			res[i.x][i.y] = black;
-		} else {
-			double resX = (i.x-n.x/2)/n.x;
-			double resY = (i.y-n.x/2)/n.y;
-			double result = -fun(resX)*scale;
-
-		if (resY == (int)(result)){
+		if (i.x == center.x || i.y == center.y) {
 			res[i.x][i.y] = black;
 		} else res[i.x][i.y] = white;
-		}
+		
 	}
+	
+	for(i.x = 0; i.x < n.x; i.x++){
+		double resX = (i.x - center.x)/(double)scale;
+		double resY = fun(resX)*scale;
+		res[i.x][(int) (center.y - resY)] = black;
+	}
+	
 
 	return n;
 }
@@ -299,12 +309,48 @@ Int2 imageOrderedDithering(Image img, Int2 n, Image res)
 					{15, 47,  7, 39, 13, 45,  5, 37},
 					{63, 31, 55, 23, 61, 29, 53, 21}
 			};
-	return int2Error;
+	if (int2IsError(n)) return int2Error;
+	
+	Int2 i;
+	for(i.x = 0; i.x < n.x; i.x++)
+	for(i.y = 0; i.y < n.y; i.y++){
+		int greyAverage = pixelGrayAverage(img[i.x][i.y]);
+		double result = greyAverage/4.0;
+		if (result > indexMatrix[i.x%INDEX_SIDE][i.y%INDEX_SIDE])
+			res[i.x][i.y] = white;
+		else res[i.x][i.y] = black;
+	}
+	return n;
 }
 
 Int2 imageSteganography(Image img, Int2 n, String s, Image res)
 {
-	return int2Error;
+	convertStringToEncodedString(s);
+	int counter = 0;
+	char c;
+	Int2 i;
+	for(i.x = 0; i.x < n.x; i.x++)
+	for(i.y = 0; i.y < n.y; i.y++){
+	Pixel p = img[i.x][i.y];
+		if (counter < strlen(s)){
+		c = s[counter++];
+		Byte newR = (p.red << 2) & ((c & 0b110000) >> 4);
+		Byte newG = (p.green << 2) & ((c & 0b001100) >> 2);
+		Byte newB = (p.blue << 2) & (c & 0b000011);
+		res[i.x][i.y] = pixel(newR, newG, newB);
+		}
+		else if (counter == strlen(s)){
+		c = '\0';
+		Byte newR = (p.red << 2) & ((c & 0b110000) >> 4);
+		Byte newG = (p.green << 2) & ((c & 0b001100) >> 2);
+		Byte newB = (p.blue << 2) & (c & 0b000011);
+		res[i.x][i.y] = pixel(newR, newG, newB);
+		counter++;
+		}
+		else res[i.x][i.y] = img[i.x][i.y];
+	}
+	
+	return n;
 }
 
 
