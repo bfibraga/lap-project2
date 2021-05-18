@@ -66,11 +66,11 @@ void convertStringToEncodedString(String s){
 	int length = strlen(s);
 	for(int i = 0; i < length; i++){
 		char character = s[i];
-		if ( character > 'a' && character < 'z')
-			character += 32;
-		else if ( (character & 0xffc0) == 0 || character == '@')
+		if ( character >= 'a' && character <= 'z')
+			character -= 32;
+		else if ( (character > '?' && character > 'Z') || character == '@')
 			character = '?';
-		s[i] = character << 2;
+		s[i] = character;
 	}
 
 }
@@ -98,29 +98,35 @@ Int2 imageCopy(Image img, Int2 n, Image res)
 Int2 imagePaint(String cor, Int2 n, Image res)
 {	
 	if (int2IsError(n)) return int2Error;
-
+	unsigned int found = 0;
+	unsigned int b[3] = {0,0,0};
+	String s;
+	Pixel p;
 	FILE *f;
 	if ((f = fopen(colorsFileName, "r")) == NULL) return int2Error;
 
-	Pixel p;
-	String s;
-	while (fgets(s, 255, f) != NULL) {
+	
+	
+	while (fgets(s, 255, f) != NULL && found == 0) {
 		if (strncmp(&s[7], cor, strlen(cor)) == 0) { // checks if color is a name of a color
 			unsigned int dec_color;
 			sscanf(s, "%x %s", &dec_color, s);
-			Byte b[3] = {
-				(dec_color&0xff0000)>>16,
-				(dec_color&0x00ff00)>>8,
-				(dec_color&0x0000ff)
-			};
-
-			p = pixel(b[0],b[1],b[2]);
-			break;
+			b[0] = (dec_color&0xff0000)>>16;
+			b[1] = (dec_color&0x00ff00)>>8;
+			b[2] = dec_color&0x0000ff;
+			found = 1;
 		}
 	}
 
 	fclose(f);
-
+	int num = sscanf(cor, "%2x%2x%2x%s", &b[0], &b[1], &b[2], s);
+	if ((found == 0) && num != 3){
+		b[0] = 0;
+		b[1] = 0;
+		b[2] = 0;
+	}
+		
+	p = pixel(b[0],b[1],b[2]);
 	Int2 i;
 	for(i.y = 0; i.y < n.y; i.y++)
 	for(i.x = 0; i.x < n.x; i.x++) {
@@ -323,33 +329,63 @@ Int2 imageOrderedDithering(Image img, Int2 n, Image res)
 	return n;
 }
 
+char sixToSeven(char c)
+{
+    if (c >= 0x1 && c <= 0x1f)
+    {
+        printf("%c", c + 0x40);
+        return (c + 0x40);
+    }
+
+    else
+    {
+        printf("%c", c);
+        return c;
+    }
+}
+
+void printMessage(Image img, Int2 n)
+{
+    Int2 i;
+    char ch;
+    for (i.y = 0; i.y < n.y; i.y++)
+    {
+        for (i.x = 0; i.x < n.x; i.x++)
+        {
+            Pixel p = img[i.x][i.y];
+            ch = ((p.red & 0b11) << 4) | ((p.green & 0b11) << 2) | (p.blue & 0b11);
+            if (ch != '\0')
+                sixToSeven(ch);
+            else
+                break;
+        }
+    }
+}
+
 Int2 imageSteganography(Image img, Int2 n, String s, Image res)
 {
 	convertStringToEncodedString(s);
 	int counter = 0;
 	char c;
+	Byte newR, newG, newB;
 	Int2 i;
-	for(i.x = 0; i.x < n.x; i.x++)
-	for(i.y = 0; i.y < n.y; i.y++){
-	Pixel p = img[i.x][i.y];
-		if (counter < strlen(s)){
+	Pixel p;
+	imageCopy(img, n, res);
+	for(i.y = 0; i.y < n.y && counter <= strlen(s); i.y++)
+	for(i.x = 0; i.x < n.x && counter <= strlen(s); i.x++){
+		p = img[i.x][i.y];
 		c = s[counter++];
-		Byte newR = (p.red << 2) & ((c & 0b110000) >> 4);
-		Byte newG = (p.green << 2) & ((c & 0b001100) >> 2);
-		Byte newB = (p.blue << 2) & (c & 0b000011);
+		printf("%c\n", c);
+		newR = (p.red << 2) | ((c & 0b110000) >> 4);
+		newG = (p.green << 2) | ((c & 0b001100) >> 2);
+		newB = (p.blue << 2) | (c & 0b000011);
 		res[i.x][i.y] = pixel(newR, newG, newB);
-		}
-		else if (counter == strlen(s)){
-		c = '\0';
-		Byte newR = (p.red << 2) & ((c & 0b110000) >> 4);
-		Byte newG = (p.green << 2) & ((c & 0b001100) >> 2);
-		Byte newB = (p.blue << 2) & (c & 0b000011);
-		res[i.x][i.y] = pixel(newR, newG, newB);
-		counter++;
-		}
-		else res[i.x][i.y] = img[i.x][i.y];
 	}
-	
+	i.y--;
+	for(; i.y < n.y; i.y++)
+	for(; i.x < n.x; i.x++)
+	res[i.x][i.y] = img[i.x][i.y];
+	printMessage(res, n);
 	return n;
 }
 
