@@ -175,9 +175,9 @@ Int2 imageMask(Image img1, Int2 n1, Image img2, Int2 n2, Image res) // pre: int2
 	for(i.y = 0; i.y < n1.y; i.y++)
 	for(i.x = 0; i.x < n1.x; i.x++) {
 		Pixel current = img1[i.x][i.y];
-		float mask[3] = {(float)img2[i.x][i.y].red/MAX_COLOR, 
-						(float)img2[i.x][i.y].green/MAX_COLOR, 
-						(float)img2[i.x][i.y].blue/MAX_COLOR };
+		double mask[3] = {(double)img2[i.x][i.y].red/MAX_COLOR, 
+						(double)img2[i.x][i.y].green/MAX_COLOR, 
+						(double)img2[i.x][i.y].blue/MAX_COLOR };
 		res[i.x][i.y] = pixel(current.red*mask[0], current.green*mask[1], current.blue*mask[2]);
 	}
 
@@ -235,7 +235,7 @@ Int2 imageRotation90(Image img, Int2 n, Image res) {
 	Int2 j = int2(n.y, n.x);
 	for(i.y = 0; i.y < j.y; i.y++)
 	for(i.x = 0; i.x < j.x; i.x++) {
-		res[i.x][i.y] = img[i.y][n.x-i.x];		
+		res[i.x][i.y] = img[i.y][j.x-(i.x+1)];		
 	}
 
 	return j;
@@ -328,63 +328,52 @@ Int2 imageOrderedDithering(Image img, Int2 n, Image res)
 	return n;
 }
 
-char sixToSeven(char c)
-{
-    if (c >= 0x1 && c <= 0x1f)
-    {
-        printf("%c", c + 0x40);
-        return (c + 0x40);
-    }
-
-    else
-    {
-        printf("%c", c);
-        return c;
-    }
-}
-
-void printMessage(Image img, Int2 n)
-{
-    Int2 i;
-    char ch;
-    for (i.y = 0; i.y < n.y; i.y++)
-    {
-        for (i.x = 0; i.x < n.x; i.x++)
-        {
-            Pixel p = img[i.x][i.y];
-            ch = ((p.red & 0b11) << 4) | ((p.green & 0b11) << 2) | (p.blue & 0b11);
-            if (ch != '\0')
-                sixToSeven(ch);
-            else
-                break;
-        }
-    }
-}
-
 Int2 imageSteganography(Image img, Int2 n, String s, Image res)
 {
 	convertStringToEncodedString(s);
-	int counter = 0;
+	int counter = 0, length = strlen(s);
 	char c;
 	Byte newR, newG, newB;
-	Int2 i;
+	Int2 i = int2(0,0);
 	Pixel p;
 	imageCopy(img, n, res);
-	for(i.y = 0; i.y < n.y && counter <= strlen(s); i.y++)
-	for(i.x = 0; i.x < n.x && counter <= strlen(s); i.x++){
-		p = img[i.x][i.y];
+	while(counter < length){
 		c = s[counter++];
-		printf("%c\n", c);
+		p = res[i.x][i.y];
 		newR = (p.red << 2) | ((c & 0b110000) >> 4);
 		newG = (p.green << 2) | ((c & 0b001100) >> 2);
 		newB = (p.blue << 2) | (c & 0b000011);
 		res[i.x][i.y] = pixel(newR, newG, newB);
+		i.x++;
+		if(i.x == n.x){
+			i.x = 0;
+			i.y++;
+		}
+		if(i.y == n.y){
+			i.x = n.x-1;
+			break;
+		}
 	}
-	i.y--;
-	for(; i.y < n.y; i.y++)
-	for(; i.x < n.x; i.x++)
-	res[i.x][i.y] = img[i.x][i.y];
-	printMessage(res, n);
+	p = res[i.x][i.y];		
+	newR = (p.red << 2);
+	newG = (p.green << 2);
+	newB = (p.blue << 2);
+	res[i.x][i.y] = pixel(newR, newG, newB);
+	/*for(i.y = 0; i.y < n.y && counter <= strlen(s); i.y++)
+	for(i.x = 0; i.x < n.x && counter <= strlen(s); i.x++){
+		p = img[i.x][i.y];
+		c = s[counter++];
+		printf("%c\n", c);
+		if (c == '\0'){
+			newR = (p.red << 2);
+			newG = (p.green << 2);
+			newB = (p.blue << 2);
+		} else {
+		newR = (p.red << 2) | ((c & 0b110000) >> 4);
+		newG = (p.green << 2) | ((c & 0b001100) >> 2);
+		newB = (p.blue << 2) | (c & 0b000011);}
+		res[i.x][i.y] = pixel(newR, newG, newB);
+	}*/
 	return n;
 }
 
