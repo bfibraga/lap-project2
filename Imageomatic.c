@@ -60,6 +60,21 @@ void sum_color(double sum_color[], Pixel add) {
 	sum_color[2] += add.blue;
 }
 
+/*** TYPE String ***/
+
+void convertStringToEncodedString(String s){
+	int length = strlen(s);
+	for(int i = 0; i < length; i++){
+		char character = s[i];
+		if ( character >= 'a' && character <= 'z')
+			character -= 32;
+		else if ( (character > '?' && character > 'Z') || character == '@')
+			character = '?';
+		s[i] = character;
+	}
+
+}
+
 /*** TYPE Image ***/
 
 void initialization(void)
@@ -83,30 +98,34 @@ Int2 imageCopy(Image img, Int2 n, Image res)
 Int2 imagePaint(String cor, Int2 n, Image res)
 {	
 	if (int2IsError(n)) return int2Error;
-
+	unsigned int found = 0;
+	unsigned int b[3] = {0,0,0};
+	String s;
+	Pixel p;
 	FILE *f;
 	if ((f = fopen(colorsFileName, "r")) == NULL) return int2Error;
-
-	Pixel p;
-	String s;
-	while (fgets(s, 255, f) != NULL) {
+	while (fgets(s, 255, f) != NULL && found == 0) {
 		if (strncmp(&s[7], cor, strlen(cor)) == 0) { // checks if color is a name of a color
 			unsigned int dec_color;
 			sscanf(s, "%x %s", &dec_color, s);
-			Byte b[3] = {
-				(dec_color&0xff0000)>>16,
-				(dec_color&0x00ff00)>>8,
-				(dec_color&0x0000ff)
-			};
-			for (int i = 0 ; i < 3 ; i++) printf("%x\n", b[i]);
-
-			p = pixel(b[0],b[1],b[2]);
-			break;
+			b[0] = (dec_color&0xff0000)>>16;
+			b[1] = (dec_color&0x00ff00)>>8;
+			b[2] = dec_color&0x0000ff;
+			found = 1;
 		}
 	}
 
 	fclose(f);
-
+	
+	if ((found == 0) ){
+		if (sscanf(cor, "%2x%2x%2x%s", &b[0], &b[1], &b[2], s) != 3){
+			b[0] = 0;
+			b[1] = 0;
+			b[2] = 0;
+		}
+	}
+		
+	p = pixel(b[0],b[1],b[2]);
 	Int2 i;
 	for(i.y = 0; i.y < n.y; i.y++)
 	for(i.x = 0; i.x < n.x; i.x++) {
@@ -216,7 +235,7 @@ Int2 imageRotation90(Image img, Int2 n, Image res) {
 	Int2 j = int2(n.y, n.x);
 	for(i.y = 0; i.y < j.y; i.y++)
 	for(i.x = 0; i.x < j.x; i.x++) {
-		res[i.x][i.y] = img[n.y-i.y][n.x-i.x];		
+		res[i.x][i.y] = img[i.y][n.x-i.x];		
 	}
 
 	return j;
@@ -263,25 +282,21 @@ Int2 imageFunctionPlotting(DoubleFun fun, int scale, Int2 n, Image res)
 {
 	if (int2IsError(n)) return int2Error;
 
-	
-
-	Int2 i;
+	Int2 i, center = int2(n.x/2, n.y/2);
 	for(i.y = 0; i.y < n.y; i.y++)
 	for(i.x = 0; i.x < n.x; i.x++) {
-		if (i.x == n.x/2) {
-			res[i.x][i.y] = black;
-		} else if (i.y == n.y/2) {
-			res[i.x][i.y] = black;
-		} else {
-			double resX = (i.x-n.x/2)/n.x;
-			double resY = (i.y-n.x/2)/n.y;
-			double result = -fun(resX)*scale;
-
-		if (resY == (int)(result)){
+		if (i.x == center.x || i.y == center.y) {
 			res[i.x][i.y] = black;
 		} else res[i.x][i.y] = white;
-		}
+		
 	}
+	
+	for(i.x = 0; i.x < n.x; i.x++){
+		double resX = (i.x - center.x)/(double)scale;
+		double resY = fun(resX)*scale;
+		res[i.x][(int) (center.y - resY)] = black;
+	}
+	
 
 	return n;
 }
@@ -299,12 +314,78 @@ Int2 imageOrderedDithering(Image img, Int2 n, Image res)
 					{15, 47,  7, 39, 13, 45,  5, 37},
 					{63, 31, 55, 23, 61, 29, 53, 21}
 			};
-	return int2Error;
+	if (int2IsError(n)) return int2Error;
+	
+	Int2 i;
+	for(i.x = 0; i.x < n.x; i.x++)
+	for(i.y = 0; i.y < n.y; i.y++){
+		int greyAverage = pixelGrayAverage(img[i.x][i.y]);
+		double result = greyAverage/4.0;
+		if (result > indexMatrix[i.x%INDEX_SIDE][i.y%INDEX_SIDE])
+			res[i.x][i.y] = white;
+		else res[i.x][i.y] = black;
+	}
+	return n;
+}
+
+char sixToSeven(char c)
+{
+    if (c >= 0x1 && c <= 0x1f)
+    {
+        printf("%c", c + 0x40);
+        return (c + 0x40);
+    }
+
+    else
+    {
+        printf("%c", c);
+        return c;
+    }
+}
+
+void printMessage(Image img, Int2 n)
+{
+    Int2 i;
+    char ch;
+    for (i.y = 0; i.y < n.y; i.y++)
+    {
+        for (i.x = 0; i.x < n.x; i.x++)
+        {
+            Pixel p = img[i.x][i.y];
+            ch = ((p.red & 0b11) << 4) | ((p.green & 0b11) << 2) | (p.blue & 0b11);
+            if (ch != '\0')
+                sixToSeven(ch);
+            else
+                break;
+        }
+    }
 }
 
 Int2 imageSteganography(Image img, Int2 n, String s, Image res)
 {
-	return int2Error;
+	convertStringToEncodedString(s);
+	int counter = 0;
+	char c;
+	Byte newR, newG, newB;
+	Int2 i;
+	Pixel p;
+	imageCopy(img, n, res);
+	for(i.y = 0; i.y < n.y && counter <= strlen(s); i.y++)
+	for(i.x = 0; i.x < n.x && counter <= strlen(s); i.x++){
+		p = img[i.x][i.y];
+		c = s[counter++];
+		printf("%c\n", c);
+		newR = (p.red << 2) | ((c & 0b110000) >> 4);
+		newG = (p.green << 2) | ((c & 0b001100) >> 2);
+		newB = (p.blue << 2) | (c & 0b000011);
+		res[i.x][i.y] = pixel(newR, newG, newB);
+	}
+	i.y--;
+	for(; i.y < n.y; i.y++)
+	for(; i.x < n.x; i.x++)
+	res[i.x][i.y] = img[i.x][i.y];
+	printMessage(res, n);
+	return n;
 }
 
 
