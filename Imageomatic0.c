@@ -136,11 +136,11 @@ int pixelGrayAverage(Pixel p)
 
 /*** TYPE Image ***/
 
-Int2 imageLoad(String ficheiro, Image res)
+Int2 imageLoad(String filename, Image res)
 {
 	Byte *mem;
 	unsigned int w, h;
-	int error = lodepng_decode24_file(&mem, &w, &h, ficheiro);
+	int error = lodepng_decode24_file(&mem, &w, &h, filename);
 	Int2 n = int2(w, h);
 	Pixel *p = (Pixel *)mem;
 	if( error != 0 )
@@ -154,7 +154,7 @@ Int2 imageLoad(String ficheiro, Image res)
 	return n;
 }
 
-bool imageStore(String ficheiro, Image img, Int2 n)
+bool imageStore(String filename, Image img, Int2 n)
 {
 	Byte *mem = malloc(MAX_X * MAX_Y * sizeof(Pixel));
 	Pixel *p = (Pixel *)mem;
@@ -163,7 +163,7 @@ bool imageStore(String ficheiro, Image img, Int2 n)
 	for(i.x = 0; i.x < n.x; i.x++) {
 		*p++ = img[i.x][i.y];
 	}
-	if( lodepng_encode24_file(ficheiro, mem, n.x, n.y) != 0 )	
+	if( lodepng_encode24_file(filename, mem, n.x, n.y) != 0 )	
 		return false;
 	free(mem);
 	return true;
@@ -306,12 +306,12 @@ static bool validateInt(String s, int max) {
 		return error("Esperava-se um inteiro valido");
 }
 
-static void executar_comando(String parts[], int nParts)
+static void executarComando(String parts[], int nParts)
 {
-	String s;
+	char s[4 * MAX_STRING];
 	stringToUpperCase(parts[0]);
 	char c0 = parts[0][0];
-	char c1 = parts[0][1];
+	//char c1 = parts[0][1];
 	switch( c0 ) {
 		case '+':
 			if( validateCommand(parts, nParts, "+", 2)
@@ -432,7 +432,7 @@ static void executar_comando(String parts[], int nParts)
 			}
 			break;
 		case 'F':
-			if(validateCommand(parts, nParts, "F", 3)
+			if(validateCommand(parts, nParts, "F", 4)
 			&& validateIntX(parts[1])
 			&& validateIntY(parts[2])
 			&& validateInt(parts[3], INT_INFINITE) ) {
@@ -516,7 +516,7 @@ static void interpreter(void)
 			printf("%s\n", parts[i]);
 #endif
 		if( nParts > 0 )
-			executar_comando(parts, nParts);
+			executarComando(parts, nParts);
 	}
 }
 
