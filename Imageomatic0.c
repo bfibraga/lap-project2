@@ -306,6 +306,22 @@ static bool validateInt(String s, int max) {
 		return error("Esperava-se um inteiro valido");
 }
 
+static void diffCheck() {
+	system("diff -s img/cinzento.png img/res/gray.png");
+	system("diff -s img/negativo.png img/res/negativo.png");
+	system("diff -s img/metade.png img/res/metade.png");
+	system("diff -s img/pintar.png img/res/pintar.png");
+	system("diff -s img/rotacao_90.png img/res/rotacao_90.png");
+	system("diff -s img/poster.png img/res/poster.png");
+	system("diff -s img/goticula.png img/res/goticula.png");
+	system("diff -s img/desfocado.png img/res/desfocado.png");
+	system("diff -s img/mascarar.png img/res/mascarar.png");
+	system("diff -s img/funcao.png img/res/funcao.png");
+	system("diff -s img/matizacao.png img/res/matizacao.png");
+	//system("diff -s img/esteganografia.png img/res/esteganografia.png");
+
+}
+
 static void executarComando(String parts[], int nParts)
 {
 	char s[4 * MAX_STRING];
@@ -469,6 +485,11 @@ static void executarComando(String parts[], int nParts)
 				break;
 			}
 			break;
+		case '=':
+			if( validateCommand(parts, nParts, "=", 1) ) {
+				diffCheck();
+				break;
+			}
 		default:
 			validateCommand(parts, nParts, "", 0);
 			break;

@@ -34,7 +34,6 @@ Comentarios:
 /*** TYPE Int2 ***/
 
 /* More Int2 functions, in case you need them */
-
 Int2 int2Subtract(Int2 a, Int2 b) {
 	return int2(a.x - b.x, a.y - b.y);
 }
@@ -43,25 +42,48 @@ Int2 int2Subtract(Int2 a, Int2 b) {
 
 /* More Pixel functions, in case you need them */
 
-/*Returns a pixel posterized by given factor*/
+/*Returns a pixel posterized by given factor as int
+	pre: pixel != NULL && factor >= 0*/
 Pixel pixelPosterize(Pixel pixel, int factor) {
 
 	int mask = 0xff << (8 - factor);
 	pixel.red = pixel.red & mask;
-	pixel.green = pixel.green  & mask;
+	pixel.green = pixel.green & mask;
 	pixel.blue = pixel.blue & mask;
 
 	return pixel;
 }
 
-void sum_color(double sum_color[], Pixel add) {
-	sum_color[0] += add.red;
-	sum_color[1] += add.green;
-	sum_color[2] += add.blue;
+/*Returns a blured pixel by given imagem, its resolution, current pixel position and a blur level as int
+	pre: img != NULL && !int2IsError(n) && !int2IsError(current) && nivel >= 0*/
+Pixel pixelBlured(Image img, Int2 n, Int2 current, int nivel){
+
+	/*Summation of the 3 color components by given pixel
+		pre: add != NULL
+		pro: sum_color[0] + sum_color[1] + sum_color[2] <= 3*MAX_COLOR*/
+	void sum_color(double sum_color[], Pixel add) {
+		sum_color[0] += add.red;
+		sum_color[1] += add.green;
+		sum_color[2] += add.blue;
+	}
+
+	double sum_rgb[3] = {0,0,0}; // Index: R=0 ; G=1 ; B=2
+	double count = 0;
+	Int2 j;
+	for (j.x = current.x-nivel ; j.x <= current.x+nivel ; j.x++)
+	for (j.y = current.y-nivel ; j.y <= current.y+nivel ; j.y++) {
+		if (int2Between(int2Zero, j, n)) {
+			sum_color(sum_rgb, img[j.x][j.y]);
+			count++;
+		}
+	}
+	return pixel(sum_rgb[0]/count, sum_rgb[1]/count, sum_rgb[2]/count);
 }
 
 /*** TYPE String ***/
 
+/*Converts string s to 6 bits ASCII representation
+	pre: s != NULL*/
 void convertStringToEncodedString(String s, String res){
 	int length = strlen(s);
 	int i;
@@ -166,19 +188,19 @@ Int2 imageDroplet(Int2 n, Image res)
 	return n;
 }
 
-
-
 Int2 imageMask(Image img1, Int2 n1, Image img2, Int2 n2, Image res) // pre: int2Equals(n1, n2)
 {
 	if (int2IsError(n1) || int2IsError(n2)) return int2Error;
 	
+	#define PRECISION_TYPE double
+
 	Int2 i;
 	for(i.y = 0; i.y < n1.y; i.y++)
 	for(i.x = 0; i.x < n1.x; i.x++) {
 		Pixel current = img1[i.x][i.y];
-		double mask[3] = {img2[i.x][i.y].red/(double)MAX_COLOR, 
-						img2[i.x][i.y].green/(double)MAX_COLOR, 
-						img2[i.x][i.y].blue/(double)MAX_COLOR };
+		PRECISION_TYPE mask[3] = {img2[i.x][i.y].red/(PRECISION_TYPE)MAX_COLOR, 
+						img2[i.x][i.y].green/(PRECISION_TYPE)MAX_COLOR, 
+						img2[i.x][i.y].blue/(PRECISION_TYPE)MAX_COLOR };
 		res[i.x][i.y] = pixel(current.red*mask[0], current.green*mask[1], current.blue*mask[2]);
 	}
 
@@ -208,38 +230,27 @@ Int2 imageBlur(Image img, Int2 n, int nivel, Image res)
 		return n;
 	}
 
-	#define ZERO2 int2(0,0)
-
-	Int2 i, j;
+	Int2 i;
 	 
 	for(i.y = 0; i.y < n.y; i.y++)
 	for(i.x = 0; i.x < n.x; i.x++) {
-		double sum[3] = {0,0,0}; // R=0 ; G=0 ; B=0
-		double count = 0;
-		for (j.x = i.x-nivel ; j.x <= i.x+nivel ; j.x++)
-		for (j.y = i.y-nivel ; j.y <= i.y+nivel ; j.y++) {
-			if (int2Between(ZERO2, j, n)) {
-				sum_color(sum, img[j.x][j.y]);
-				count++;
-			}
-		}
-		res[i.x][i.y] = pixel(sum[0]/count, sum[1]/count, sum[2]/count);
+		res[i.x][i.y] = pixelBlured(img, n, i, nivel); 
 	}
 
 	return n;
 }
 
 Int2 imageRotation90(Image img, Int2 n, Image res) {
+	
 	if (int2IsError(n)) return int2Error;
 
-	Int2 i;
-	Int2 j = int2(n.y, n.x);
-	for(i.y = 0; i.y < j.y; i.y++)
-	for(i.x = 0; i.x < j.x; i.x++) {
-		res[i.x][i.y] = img[i.y][j.x-(i.x+1)];		
+	Int2 i, nr = int2(n.y, n.x);
+	for(i.y = 0; i.y < nr.y; i.y++)
+	for(i.x = 0; i.x < nr.x; i.x++) {
+		res[i.x][i.y] = img[i.y][nr.x-(i.x+1)];		
 	}
 
-	return j;
+	return nr;
 }
 
 
@@ -247,7 +258,7 @@ Int2 imagePosterize(Image img, Int2 n, int factor, Image res)
 {
 	if (int2IsError(n) || factor < 0 || factor > 8) return int2Error;
 
-	if (factor == 8){
+	if (factor == 8) {
 		imageCopy(img, n, res);
 		return n;
 	}
@@ -267,23 +278,22 @@ Int2 imageHalf(Image img, Int2 n, Image res)
 {
 	if (int2IsError(n)) return int2Error;
 
-	Int2 i;
-	Int2 j = int2(n.x/2, n.y/2);
-	for(i.y = 0; i.y < j.y; i.y++)
-	for(i.x = 0; i.x < j.x; i.x++) {
-		Int2 old = int2(i.x*2, i.y*2);
-		res[i.x][i.y] = img[old.x][old.y];
+	Int2 i, nh = int2Half(n);
+	for(i.y = 0; i.y < nh.y; i.y++)
+	for(i.x = 0; i.x < nh.x; i.x++) {
+		res[i.x][i.y] = img[i.x*2][i.y*2];
 	}
-	n = j;
 
-	return n;
+	return nh;
 }
 
 Int2 imageFunctionPlotting(DoubleFun fun, int scale, Int2 n, Image res)
 {
 	if (int2IsError(n)) return int2Error;
 
-	Int2 i, center = int2(n.x/2, n.y/2);
+	#define PRECISION_TYPE double
+
+	Int2 i, center = int2Half(n);
 	for(i.y = 0; i.y < n.y; i.y++)
 	for(i.x = 0; i.x < n.x; i.x++) {
 		if (i.x == center.x || i.y == center.y) {
@@ -293,8 +303,8 @@ Int2 imageFunctionPlotting(DoubleFun fun, int scale, Int2 n, Image res)
 	}
 	
 	for(i.x = 0; i.x < n.x; i.x++){
-		double resX = (i.x - center.x)/(double)scale;
-		double resY = fun(resX)*scale;
+		PRECISION_TYPE resX = (i.x - center.x)/(PRECISION_TYPE)scale;
+		PRECISION_TYPE resY = fun(resX)*scale;
 		res[i.x][(int) (center.y - resY)] = black;
 	}
 	
@@ -315,16 +325,17 @@ Int2 imageOrderedDithering(Image img, Int2 n, Image res)
 					{15, 47,  7, 39, 13, 45,  5, 37},
 					{63, 31, 55, 23, 61, 29, 53, 21}
 			};
+
 	if (int2IsError(n)) return int2Error;
+
+	#define PRECISION_TYPE double
 	
 	Int2 i;
-	for(i.x = 0; i.x < n.x; i.x++)
-	for(i.y = 0; i.y < n.y; i.y++){
-		int greyAverage = pixelGrayAverage(img[i.x][i.y]);
-		double result = greyAverage/4.0;
-		if (result > indexMatrix[i.x%INDEX_SIDE][i.y%INDEX_SIDE])
-			res[i.x][i.y] = white;
-		else res[i.x][i.y] = black;
+	for(i.y = 0; i.y < n.y; i.y++)
+	for(i.x = 0; i.x < n.x; i.x++) {
+		Int2 index = int2(i.x % INDEX_SIDE, i.y % INDEX_SIDE);
+		PRECISION_TYPE average = (PRECISION_TYPE) pixelGrayAverage(img[i.x][i.y])/4;  // [0;63,75]
+		res[i.x][i.y] = indexMatrix[index.x][index.y] < average ? white : black;
 	}
 	return n;
 }
@@ -343,7 +354,7 @@ void decode(Image img, Int2 n, String out){
     Int2 i;
     for(i.y = 0; i.y < n.y; i.y++)
     for(i.x = 0; i.x < n.x; i.x++) {
-         char c = decFromPixel(img[i.x][i.y]);
+        char c = decFromPixel(img[i.x][i.y]);
         *out = c;
         if(c == '\0') {
             return;
@@ -351,18 +362,31 @@ void decode(Image img, Int2 n, String out){
         out++;
     }
 }
+
+Pixel removeRightMostBits(Pixel current, Byte rgb[], char c) {
+	rgb[0] = (current.red << 2) | ((c & 0b110000) >> 4);
+	rgb[1] = (current.green << 2) | ((c & 0b001100) >> 2);
+	rgb[2] = (current.blue << 2) | (c & 0b000011);
+	return pixel(rgb[0], rgb[1], rgb[2]);
+}
+
 Int2 imageSteganography(Image img, Int2 n, String s, Image res)
 {
-	String encoded;
-	convertStringToEncodedString(s, encoded);
-	
+	if (int2IsError(n)) return int2Error;
+
+	#define P res[i.x][i.y]
+
 	int counter = 0, length = strlen(s);
 	char c;
-	Byte newR, newG, newB;
-	Int2 i = int2(0,0);
+	//Byte newR, newG, newB;
+	Byte new_rgb[3];
+	Int2 i = int2Zero;
 	Pixel p;
+	String encoded;
+	convertStringToEncodedString(s, encoded);
 	imageCopy(img, n, res);
-	while(counter < length){
+
+	/*while(counter < length){
 		c = encoded[counter++];
 		p = res[i.x][i.y];
 		newR = (p.red << 2) | ((c & 0b110000) >> 4);
@@ -379,11 +403,25 @@ Int2 imageSteganography(Image img, Int2 n, String s, Image res)
 			break;
 		}
 	}
+ 
 	p = res[i.x][i.y];		
 	newR = (p.red << 2);
 	newG = (p.green << 2);
 	newB = (p.blue << 2);
-	res[i.x][i.y] = pixel(newR, newG, newB);
+	res[i.x][i.y] = pixel(newR, newG, newB);*/
+
+	for (i.y = 0 ; i.y < n.y && counter < length ; i.y++)
+	for (i.x = 0 ; i.x < n.x-1 && counter < length ; i.x++) {
+		c = encoded[counter++];
+		p = res[i.x][i.y];
+		res[i.x][i.y] = removeRightMostBits(p, new_rgb, c);
+	}
+	printf("\n%d %d\n", i.x, i.y);
+	p = res[i.x+1][i.y];
+	new_rgb[0] = (p.red<<2);
+	new_rgb[1] = (p.green<<2);
+	new_rgb[2] = (p.blue<<2);
+	res[i.x+1][i.y] = pixel(new_rgb[0], new_rgb[1], new_rgb[2]);
 
 	return n;
 }
@@ -454,5 +492,6 @@ void imageTests(void)
 	n = imageLoad("img/frutos.png", img);
 	n = imageSteganography(img, n, "atacamos ao amanhecer", res);
 	imageStore("img/esteganografia.png", res, n);
+
 }
 
