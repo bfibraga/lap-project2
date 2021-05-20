@@ -82,8 +82,8 @@ typedef double (DoubleFun)(double);
 extern String colorsFileName; // the name of the file of colors 
 
 void initialization(void);
-extern Int2 imageLoad(String ficheiro, Image res);
-extern bool imageStore(String ficheiro, Image img, Int2 n);
+extern Int2 imageLoad(String filename, Image res);
+extern bool imageStore(String filename, Image img, Int2 n);
 
 extern Int2 imageCopy(Image img, Int2 n, Image res);
 extern Int2 imageGrayscale(Image img, Int2 n, Image res);
