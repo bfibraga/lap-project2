@@ -80,6 +80,15 @@ Pixel pixelBlured(Image img, Int2 n, Int2 current, int nivel){
 	return pixel(sum_rgb[0]/count, sum_rgb[1]/count, sum_rgb[2]/count);
 }
 
+/*Returns a pixel with given character c saved in the 2 last bits of each color component
+	pre: current != NULL && rgb != NULL*/
+Pixel replaceRightMostBits(Pixel current, Byte rgb[], char c) {
+	rgb[0] = (current.red << 2) | ((c & 0b110000) >> 4);
+	rgb[1] = (current.green << 2) | ((c & 0b001100) >> 2);
+	rgb[2] = (current.blue << 2) | (c & 0b000011);
+	return pixel(rgb[0], rgb[1], rgb[2]);
+}
+
 /*** TYPE String ***/
 
 /*Converts string s to 6 bits ASCII representation
@@ -105,7 +114,6 @@ void initialization(void)
 	// If you need to perform some initialization, this is the place
 	// to write the initialization code.
 }
-
 
 Int2 imageCopy(Image img, Int2 n, Image res)
 {
@@ -340,88 +348,37 @@ Int2 imageOrderedDithering(Image img, Int2 n, Image res)
 	return n;
 }
 
-char decFromPixel(Pixel pixel){
-    char c = 0;
-    c = c | ((pixel.red & 0b11) << 4);
-    c = c | ((pixel.green & 0b11) << 2);
-    c = c | (pixel.blue & 0b11);
-    if(c == 0) return '\0';
-    else if (c <= 0x1f) return c + 0x40;
-    else return c;
-}
-
-void decode(Image img, Int2 n, String out){
-    Int2 i;
-    for(i.y = 0; i.y < n.y; i.y++)
-    for(i.x = 0; i.x < n.x; i.x++) {
-        char c = decFromPixel(img[i.x][i.y]);
-        *out = c;
-        if(c == '\0') {
-            return;
-        }
-        out++;
-    }
-}
-
-Pixel removeRightMostBits(Pixel current, Byte rgb[], char c) {
-	rgb[0] = (current.red << 2) | ((c & 0b110000) >> 4);
-	rgb[1] = (current.green << 2) | ((c & 0b001100) >> 2);
-	rgb[2] = (current.blue << 2) | (c & 0b000011);
-	return pixel(rgb[0], rgb[1], rgb[2]);
-}
-
 Int2 imageSteganography(Image img, Int2 n, String s, Image res)
 {
 	if (int2IsError(n)) return int2Error;
 
-	#define P res[i.x][i.y]
-
 	int counter = 0, length = strlen(s);
 	char c;
-	//Byte newR, newG, newB;
 	Byte new_rgb[3];
 	Int2 i = int2Zero;
-	Pixel p;
+	Pixel *p;
 	String encoded;
 	convertStringToEncodedString(s, encoded);
 	imageCopy(img, n, res);
 
-	/*while(counter < length){
+	while(counter < length){
 		c = encoded[counter++];
-		p = res[i.x][i.y];
-		newR = (p.red << 2) | ((c & 0b110000) >> 4);
-		newG = (p.green << 2) | ((c & 0b001100) >> 2);
-		newB = (p.blue << 2) | (c & 0b000011);
-		res[i.x][i.y] = pixel(newR, newG, newB);
-		i.x++;
+		p = &res[i.x][i.y];
+		res[i.x++][i.y] = replaceRightMostBits(*p, new_rgb, c);
+		
 		if(i.x == n.x){
 			i.x = 0;
 			i.y++;
 		}
+
 		if(i.y == n.y){
 			i.x = n.x-1;
 			break;
 		}
 	}
- 
-	p = res[i.x][i.y];		
-	newR = (p.red << 2);
-	newG = (p.green << 2);
-	newB = (p.blue << 2);
-	res[i.x][i.y] = pixel(newR, newG, newB);*/
 
-	for (i.y = 0 ; i.y < n.y && counter < length ; i.y++)
-	for (i.x = 0 ; i.x < n.x-1 && counter < length ; i.x++) {
-		c = encoded[counter++];
-		p = res[i.x][i.y];
-		res[i.x][i.y] = removeRightMostBits(p, new_rgb, c);
-	}
-	printf("\n%d %d\n", i.x, i.y);
-	p = res[i.x+1][i.y];
-	new_rgb[0] = (p.red<<2);
-	new_rgb[1] = (p.green<<2);
-	new_rgb[2] = (p.blue<<2);
-	res[i.x+1][i.y] = pixel(new_rgb[0], new_rgb[1], new_rgb[2]);
+	p = &res[i.x][i.y];
+	res[i.x][i.y] = replaceRightMostBits(*p, new_rgb, '\0');
 
 	return n;
 }
